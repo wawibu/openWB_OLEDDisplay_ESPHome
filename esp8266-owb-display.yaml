@@ -1,0 +1,311 @@
+esphome:
+  name: esp8266-owb-display
+  includes:
+    - esp8266-owb-display-icon.h
+
+esp8266:
+  board: d1_mini
+
+# Enable logging
+logger:
+
+# Enable MQTT
+mqtt:
+  broker: 192.168.193.50
+  
+ota:
+  password: "af9ed57e0d8e5a77d22d629f17d0d44c"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  use_address: 10.1.1.192
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "esp8266-oWB-Display"
+    password: "ggEL3DQrCWbU"
+    
+web_server:
+  port: 80
+  
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: "Europe/Berlin"
+    servers: "de.pool.ntp.org"
+
+globals:
+  - id: blitz
+    type: int[10]
+    restore_value: no
+    initial_value: '{ 0x3c, 0x78, 0x70, 0xe0, 0xfc, 0x38, 0x30, 0x60, 0xc0, 0x80 }'
+  - id: arrow_right
+    type: int[10]
+    restore_value: no
+    initial_value: '{ 0x00, 0x08, 0x0c, 0x0e, 0xff, 0xff, 0x0e, 0x0c, 0x08, 0x00 }'
+  - id: arrow_left
+    type: int[10]
+    restore_value: no
+    initial_value: '{ 0x00, 0x10, 0x30, 0x70, 0xff, 0xff, 0x70, 0x30, 0x10, 0x00 }'
+  - id: haus1
+    type: int[10]
+    restore_value: no
+    initial_value: '{ 0x0c, 0x1e, 0x3f, 0x7f, 0xff, 0xcc, 0xfc, 0xfc, 0xfc, 0x00 }'
+  - id: haus2
+    type: int[10]
+    restore_value: no
+    initial_value: '{ 0x00, 0x00, 0x00, 0x80, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0x00 }'
+  - id: unplugged1
+    type: int[10]
+    restore_value: no
+    initial_value: '{ 0x00, 0xf0, 0xb0, 0xb0, 0x90, 0xde, 0xd2, 0xf2, 0xf3, 0xf0 }'
+  - id: unplugged2
+    type: int[10]
+    restore_value: no
+    initial_value: '{ 0x00, 0x00, 0x00, 0x60, 0x40, 0x40, 0x40, 0x40, 0xc0, 0x00 }'
+  - id: unplugged3
+    type: int[10]
+    restore_value: no
+    initial_value: '{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }'
+  - id: plugged1
+    type: int[10]
+    restore_value: no
+    initial_value: '{ 0x00, 0xf0, 0xb0, 0xb0, 0x90, 0xde, 0xd2, 0xf2, 0xf3, 0xf0 }'
+  - id: plugged2
+    type: int[10]
+    restore_value: no
+    initial_value: '{ 0x07, 0x04, 0x08, 0x08, 0x38, 0x0f, 0x79, 0x4f, 0xcf, 0x0c }'
+  - id: plugged3
+    type: int[10]
+    restore_value: no
+    initial_value: '{ 0xf0, 0x10, 0x08, 0x08, 0x0e, 0xf8, 0xc8, 0xf8, 0xf8, 0x18 }'
+    
+font:
+  - file: "gfonts://Orbitron"
+    id: myFont1
+    size: 8 
+  - file: "gfonts://Orbitron"
+    id: myFont2
+    size: 12
+    
+i2c:
+  sda: D2
+  scl: D1
+  frequency: 400kHz
+  
+sensor:
+  - platform: mqtt_subscribe
+    name: "Leistung EVU"
+    id: owb_evu
+    topic: openWB/evu/W
+    unit_of_measurement: "W"
+
+  - platform: mqtt_subscribe
+    name: "Leistung PV"
+    id: owb_pv
+    topic: openWB/pv/W
+    unit_of_measurement: "W"
+    filters:
+      multiply: -1
+
+  - platform: mqtt_subscribe
+    name: "Leistung alle LPs"
+    id: owb_all_chargePoints
+    topic: openWB/global/WAllChargePoints
+    unit_of_measurement: "W"
+
+  - platform: mqtt_subscribe
+    name: "LP1 SOC"
+    id: owb_lp1_soc
+    topic: openWB/lp/1/%Soc
+    unit_of_measurement: "%"
+
+  - platform: mqtt_subscribe
+    name: "LP1 ist verbunden"
+    id: owb_lp1_plugstate
+    topic: openWB/lp/1/boolPlugStat
+
+  - platform: mqtt_subscribe
+    name: "LP1 wird geladen"
+    id: owb_lp1_chargestate
+    topic: openWB/lp/1/boolChargeStat
+
+  - platform: mqtt_subscribe
+    name: "LP2 SOC"
+    id: owb_lp2_soc
+    topic: openWB/lp/2/%Soc
+    unit_of_measurement: "%"
+
+  - platform: mqtt_subscribe
+    name: "LP2 ist verbunden"
+    id: owb_lp2_plugstate
+    topic: openWB/lp/2/boolPlugStat
+
+  - platform: mqtt_subscribe
+    name: "LP2 wird geladen"
+    id: owb_lp2_chargestate
+    topic: openWB/lp/2/boolChargeStat
+    
+interval:
+  - interval: 5s
+    then:
+      - display.page.show_next: myDisplay
+      - component.update: myDisplay      
+    
+display:
+  - platform: ssd1306_i2c
+#    model: "SSD1306 128x64"
+    model: "SH1106 128x64"
+    update_interval: 1s
+    id: myDisplay
+    pages:
+      - id: page1
+        lambda: |-
+          // EVU Werte - Bezug
+          if(id(owb_evu).state >= 0) {
+            if(id(owb_evu).state <= 1000) {
+              it.print (  it.get_width() / 4,  0, id(myFont1), TextAlign::CENTER_HORIZONTAL, "EVU (W)");
+              it.printf(  it.get_width() / 4, 10, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%5.0f", id(owb_evu).state);
+            } else {
+              it.print (  it.get_width() / 4,  0, id(myFont1), TextAlign::CENTER_HORIZONTAL, "EVU (kW)");
+              it.printf(  it.get_width() / 4, 10, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%3.2f", (id(owb_evu).state / 1000));
+            }
+          } else { // EVU Werte - Einspeisung
+            if(id(owb_evu).state >= -1000) {
+              it.print (  it.get_width() / 4,  0, id(myFont1), TextAlign::CENTER_HORIZONTAL, "EVU (W)");
+              it.printf(  it.get_width() / 4, 10, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%5.0f", id(owb_evu).state * -1);
+            } else {
+              it.print (  it.get_width() / 4,  0, id(myFont1), TextAlign::CENTER_HORIZONTAL, "EVU (kW)");
+              it.printf(  it.get_width() / 4, 10, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%3.2f", (id(owb_evu).state * -1 / 1000));
+            }
+          }
+    
+          // PV Werte
+          if (id(owb_pv).state <= 1000) {
+            it.print ( it.get_width() / 4 * 3,  0, id(myFont1), TextAlign::CENTER_HORIZONTAL, "PV (W)");
+            it.printf( it.get_width() / 4 * 3, 10, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%5.0f", id(owb_pv).state);
+          } else {
+            it.print ( it.get_width() / 4 * 3,  0, id(myFont1), TextAlign::CENTER_HORIZONTAL, "PV (kW)");
+            it.printf( it.get_width() / 4 * 3, 10, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%3.2f", id(owb_pv).state / 1000);
+          }
+          
+          // Leistung der LPs anzeigen
+          if(id(owb_all_chargePoints).state < 1000) {
+            it.print (  it.get_width() / 4, 40, id(myFont1), TextAlign::CENTER_HORIZONTAL, "ALL (W)");
+            it.printf(  it.get_width() / 4, 50, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%5.0f", id(owb_all_chargePoints).state);
+          } else {
+            it.print (  it.get_width() / 4, 40, id(myFont1), TextAlign::CENTER_HORIZONTAL, "ALL (kW)");
+            it.printf(  it.get_width() / 4, 50, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%3.2f", (id(owb_all_chargePoints).state / 1000));
+          }
+          
+          // Leistung von LP1
+          if (id(owb_lp1_chargestate).state ) {
+            it.print ( it.get_width() / 4 * 3,  40, id(myFont1), TextAlign::CENTER_HORIZONTAL, "SoC LP1");
+          }
+          if (id(owb_lp1_plugstate).state ) {
+            it.print ( it.get_width() / 4 * 3,  40, id(myFont1), TextAlign::CENTER_HORIZONTAL, "SoC LP1");
+          } else {
+            it.print ( it.get_width() / 4 * 3,  40, id(myFont1), TextAlign::CENTER_HORIZONTAL, "SoC LP1");
+          }
+          it.printf( it.get_width() / 4 * 3,  50, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%3.0f%%", id(owb_lp1_soc).state);
+          
+          
+          // Icons zeichnen
+          drawIcon( 30,  27, id(blitz));
+          
+          if (id(owb_evu).state > 0) {
+            drawIcon( 38,  27, id(arrow_right));
+          } else {
+            drawIcon( 38,  27, id(arrow_left));
+          }
+          
+          drawIcon( 48  ,  27, id(haus1));
+          drawIcon( 48+8,  27, id(haus2));
+          
+          if (id(owb_lp1_plugstate).state ) {
+            drawIcon(90     , 27, id(plugged1));
+            drawIcon(90 +  8, 27, id(plugged2));
+            drawIcon(90 + 16, 27, id(plugged3)); 
+            if (id(owb_lp1_chargestate).state ) {
+              drawIcon(116    , 27, id(blitz));
+            } 
+          } else {
+            drawIcon(90     , 27, id(unplugged1));
+            drawIcon(90 +  8, 27, id(unplugged2));
+            drawIcon(90 + 16, 27, id(unplugged3)); 
+          }
+      - id: page2 
+        lambda: |-  
+          // EVU Werte - Bezug
+          if(id(owb_evu).state >= 0) {
+            if(id(owb_evu).state <= 1000) {
+              it.print (  it.get_width() / 4,  0, id(myFont1), TextAlign::CENTER_HORIZONTAL, "EVU (W)");
+              it.printf(  it.get_width() / 4, 10, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%5.0f", id(owb_evu).state);
+            } else {
+              it.print (  it.get_width() / 4,  0, id(myFont1), TextAlign::CENTER_HORIZONTAL, "EVU (kW)");
+              it.printf(  it.get_width() / 4, 10, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%3.2f", (id(owb_evu).state / 1000));
+            }
+          } else { // EVU Werte - Einspeisung
+            if(id(owb_evu).state >= -1000) {
+              it.print (  it.get_width() / 4,  0, id(myFont1), TextAlign::CENTER_HORIZONTAL, "EVU (W)");
+              it.printf(  it.get_width() / 4, 10, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%5.0f", id(owb_evu).state * -1);
+            } else {
+              it.print (  it.get_width() / 4,  0, id(myFont1), TextAlign::CENTER_HORIZONTAL, "EVU (kW)");
+              it.printf(  it.get_width() / 4, 10, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%3.2f", (id(owb_evu).state * -1 / 1000));
+            }
+          }
+    
+          // PV Werte
+          if (id(owb_pv).state <= 1000) {
+            it.print ( it.get_width() / 4 * 3,  0, id(myFont1), TextAlign::CENTER_HORIZONTAL, "PV (W)");
+            it.printf( it.get_width() / 4 * 3, 10, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%5.0f", id(owb_pv).state);
+          } else {
+            it.print ( it.get_width() / 4 * 3,  0, id(myFont1), TextAlign::CENTER_HORIZONTAL, "PV (kW)");
+            it.printf( it.get_width() / 4 * 3, 10, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%3.2f", id(owb_pv).state / 1000);
+          }
+          
+          // Leistung der LPs anzeigen
+          if(id(owb_all_chargePoints).state < 1000) {
+            it.print (  it.get_width() / 4, 40, id(myFont1), TextAlign::CENTER_HORIZONTAL, "ALL (W)");
+            it.printf(  it.get_width() / 4, 50, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%5.0f", id(owb_all_chargePoints).state);
+          } else {
+            it.print (  it.get_width() / 4, 40, id(myFont1), TextAlign::CENTER_HORIZONTAL, "ALL (kW)");
+            it.printf(  it.get_width() / 4, 50, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%3.2f", (id(owb_all_chargePoints).state / 1000));
+          }
+          
+          // Leistung von LP2
+          if (id(owb_lp2_chargestate).state ) {
+            it.print ( it.get_width() / 4 * 3,  40, id(myFont1), TextAlign::CENTER_HORIZONTAL, "SoC LP2");
+          }
+          if (id(owb_lp2_plugstate).state ) {
+            it.print ( it.get_width() / 4 * 3,  40, id(myFont1), TextAlign::CENTER_HORIZONTAL, "SoC LP2");
+          } else {
+            it.print ( it.get_width() / 4 * 3,  40, id(myFont1), TextAlign::CENTER_HORIZONTAL, "SoC LP2");
+          }
+          it.printf( it.get_width() / 4 * 3,  50, id(myFont2), TextAlign::CENTER_HORIZONTAL, "%3.0f%%", id(owb_lp2_soc).state);
+          
+          
+          // Icons zeichnen
+          drawIcon( 30,  27, id(blitz));
+          
+          if (id(owb_evu).state > 0) {
+            drawIcon( 38,  27, id(arrow_right));
+          } else {
+            drawIcon( 38,  27, id(arrow_left));
+          }
+          
+          drawIcon( 48  ,  27, id(haus1));
+          drawIcon( 48+8,  27, id(haus2));
+          
+          if (id(owb_lp2_plugstate).state ) {
+            drawIcon(90     , 27, id(plugged1));
+            drawIcon(90 +  8, 27, id(plugged2));
+            drawIcon(90 + 16, 27, id(plugged3)); 
+            if (id(owb_lp2_chargestate).state ) {
+              drawIcon(116    , 27, id(blitz));
+            } 
+          } else {
+            drawIcon(90     , 27, id(unplugged1));
+            drawIcon(90 +  8, 27, id(unplugged2));
+            drawIcon(90 + 16, 27, id(unplugged3)); 
+          }
