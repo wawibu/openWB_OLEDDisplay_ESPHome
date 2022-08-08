@@ -1,3 +1,21 @@
+# ESPHome fork of MartinRinas/openWB_OLEDDisplay
+This fork is based on Martin Rinas openWB Mini Statusdisplay.
+
+I transferred it to be useable with ESPHome. The ESPHome Version covers only the graphical UI version and supports 2 LPs. Information on LP1 and LP2 are rotating each 5 seconds. 
+
+
+EPSHome Version exist out of 2 files:
+* esp8266-owb-display.yaml
+
+  You need to adjust in row 14 the IP of your openWB Wallbox. 
+  Row 22 could be removed if you don't want to force a dedicated IP for the ESP.
+  Display shows LP1 and LP2 information based on the rotation invertal set in row 150.
+  If only one LP is available, comment row 149 - 153 out and by that only the information on LP1 will be shown.
+* esp8266-owb-display-icon.h
+
+  this needs to be stored in the same directory as the yaml file and contains a function to draw the bitmaps. 
+
+---
 # openWB_OLEDDisplay
 OpenWB status display using ESP8266 and 0.96" OLED Display.
 Displays current EVU, PV and combined power of all charging ports plus SoC of charge port 1 and if this charge port is plugged in (P) or charging (C).
